@@ -1,0 +1,9 @@
+{
+  "name": "omnibrain-multi-ai",
+  "version": "2.0.0",
+  "description": "Omnilingual Multi-AI Advisor & Savage Roast Engine powered by Gemini Flash Latest, OpenAI, DeepSeek, and Llama 3.3",
+  "scripts": {
+    "start": "gunicorn app:app"
+  },
+  "keywords": ["ai", "gemini", "openai", "deepseek", "llama", "flask", "sqlite", "voice-ai"]
+}
