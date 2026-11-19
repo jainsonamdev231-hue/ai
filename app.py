@@ -1,28 +1,15 @@
-# ==============================================================================
-# OMNIBRAIN GOD MODE — PYTHON FLASK SERVER (RENDER BACKEND)
-# Serves root index.html, style.css, script.js + SQLite Memory + Multi-AI Council
-# ==============================================================================
-
 import os
+import json
 import sqlite3
-import datetime
-import requests
+import urllib.request
+import urllib.error
 from flask import Flask, request, jsonify, send_from_directory
-from google import genai
-from google.genai import types
 
-# Serve HTML, CSS, and JS directly from the root repository folder
 app = Flask(__name__, static_folder=".", template_folder=".")
 
-# Load Gemini API Key from Render Environment Variables
-GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
-GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "").strip()
 DB_PATH = "omnibrain.db"
 
-# Initialize Google GenAI Client with gemini-flash-latest
-gemini_client = genai.Client(api_key=GEMINI_API_KEY) if GEMINI_API_KEY else None
-
-# Master Omnilingual & Savage Roast System Instructions
 BRAIN_PERSONALITY = """
 You are OmniBrain GOD, an omnilingual, hyper-intelligent, human-like AI advisor and savage roast master.
 1. EVERY LANGUAGE: Fluently understand and reply in English, Hindi, Hinglish, and every other language/slang on Earth. Always match the user's language and vibe.
@@ -31,7 +18,7 @@ You are OmniBrain GOD, an omnilingual, hyper-intelligent, human-like AI advisor 
 4. MEMORY: Use the Saved Facts and Recent Chat History provided in the prompt naturally.
 """
 
-# --- EMBEDDED SQLITE DATABASE ENGINE ---
+# --- SQLITE MEMORY DATABASE ---
 def get_db():
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
@@ -44,8 +31,7 @@ def init_db():
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             sender TEXT NOT NULL,
             message TEXT NOT NULL,
-            ai_model TEXT DEFAULT 'council',
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            ai_model TEXT DEFAULT 'council'
         )
     """)
     conn.execute("""
@@ -98,89 +84,70 @@ def delete_fact(fact_key):
     conn.commit()
     conn.close()
 
-# --- MULTI-AI BRAIN CONNECTORS ---
+# --- ZERO-DEPENDENCY HTTP AI CONNECTORS ---
+def http_post_json(url, payload, headers=None, timeout=25):
+    req_headers = {"Content-Type": "application/json", "User-Agent": "OmniBrain/1.0"}
+    if headers:
+        req_headers.update(headers)
+    data = json.dumps(payload).encode("utf-8")
+    req = urllib.request.Request(url, data=data, headers=req_headers, method="POST")
+    with urllib.request.urlopen(req, timeout=timeout) as resp:
+        return resp.read().decode("utf-8")
+
 def ask_gemini(prompt_text):
-    if not gemini_client:
-        return ask_pollinations(prompt_text, "openai")
+    if not GEMINI_API_KEY:
+        return ask_free_ai(prompt_text, "openai")
     try:
-        response = gemini_client.models.generate_content(
-            model="gemini-flash-latest",
-            contents=prompt_text,
-            config=types.GenerateContentConfig(
-                system_instruction=BRAIN_PERSONALITY,
-                temperature=0.95,
-                safety_settings=[
-                    types.SafetySetting(category="HARM_CATEGORY_HARASSMENT", threshold="BLOCK_NONE"),
-                    types.SafetySetting(category="HARM_CATEGORY_HATE_SPEECH", threshold="BLOCK_NONE"),
-                    types.SafetySetting(category="HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold="BLOCK_NONE"),
-                    types.SafetySetting(category="HARM_CATEGORY_DANGEROUS_CONTENT", threshold="BLOCK_NONE"),
-                ]
-            )
-        )
-        return response.text
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key={GEMINI_API_KEY}"
+        payload = {
+            "system_instruction": {"parts": [{"text": BRAIN_PERSONALITY}]},
+            "contents": [{"parts": [{"text": prompt_text}]}],
+            "generationConfig": {"temperature": 0.95},
+            "safetySettings": [
+                {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE"},
+                {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_NONE"},
+                {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_NONE"},
+                {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_NONE"}
+            ]
+        }
+        raw = http_post_json(url, payload)
+        data = json.loads(raw)
+        return data["candidates"][0]["content"]["parts"][0]["text"]
     except Exception:
-        return ask_pollinations(prompt_text, "openai")
+        return ask_free_ai(prompt_text, "openai")
 
-def ask_pollinations(prompt_text, model_name="openai"):
-    """100% Free & Key-Free Engine for OpenAI, DeepSeek, Llama, Mistral, and Qwen."""
+def ask_free_ai(prompt_text, model_name="openai"):
+    """100% Free & No API Key Required (OpenAI, DeepSeek, Llama, Mistral, Qwen)."""
     try:
-        res = requests.post(
-            "https://text.pollinations.ai/",
-            headers={"Content-Type": "application/json"},
-            json={
-                "messages": [
-                    {"role": "system", "content": BRAIN_PERSONALITY},
-                    {"role": "user", "content": prompt_text}
-                ],
-                "model": model_name,
-                "jsonMode": False
-            },
-            timeout=28
-        )
-        return res.text.strip() if res.status_code == 200 else "Brain busy, retry!"
+        payload = {
+            "messages": [
+                {"role": "system", "content": BRAIN_PERSONALITY},
+                {"role": "user", "content": prompt_text}
+            ],
+            "model": model_name,
+            "jsonMode": False
+        }
+        text = http_post_json("https://text.pollinations.ai/", payload)
+        return text.strip() if text.strip() else "Brain busy, send again!"
     except Exception as e:
-        return f"Free AI Error: {str(e)}"
+        return f"Free AI busy ({str(e)}), hit Send again!"
 
-def ask_llama(prompt_text):
-    if not GROQ_API_KEY:
-        return ask_pollinations(prompt_text, "llama")
-    try:
-        res = requests.post(
-            "https://api.groq.com/openai/v1/chat/completions",
-            headers={"Authorization": f"Bearer {GROQ_API_KEY}", "Content-Type": "application/json"},
-            json={
-                "model": "llama-3.3-70b-versatile",
-                "messages": [
-                    {"role": "system", "content": BRAIN_PERSONALITY},
-                    {"role": "user", "content": prompt_text}
-                ],
-                "temperature": 0.9
-            },
-            timeout=20
-        )
-        return res.json()["choices"][0]["message"]["content"]
-    except Exception:
-        return ask_pollinations(prompt_text, "llama")
-
-# --- STATIC FILE & API ROUTES ---
+# --- ROUTES ---
 @app.route("/")
 def serve_index():
     return send_from_directory(".", "index.html")
 
 @app.route("/<path:filename>")
-def serve_static_files(filename):
+def serve_files(filename):
     return send_from_directory(".", filename)
 
 @app.route("/ping")
 def ping():
-    return jsonify({"status": "awake", "time": datetime.datetime.utcnow().isoformat()}), 200
+    return jsonify({"status": "awake"}), 200
 
 @app.route("/api/state", methods=["GET"])
 def api_state():
-    return jsonify({
-        "history": get_recent_messages(35),
-        "facts": get_all_facts()
-    })
+    return jsonify({"history": get_recent_messages(35), "facts": get_all_facts()})
 
 @app.route("/api/facts", methods=["POST"])
 def api_add_fact():
@@ -236,28 +203,24 @@ def chat():
     if mode == "gemini":
         reply = ask_gemini(compiled_prompt)
     elif mode == "gpt":
-        reply = ask_pollinations(compiled_prompt, "openai")
+        reply = ask_free_ai(compiled_prompt, "openai")
     elif mode == "deepseek":
-        reply = ask_pollinations(compiled_prompt, "deepseek")
+        reply = ask_free_ai(compiled_prompt, "deepseek")
     elif mode == "llama":
-        reply = ask_llama(compiled_prompt)
+        reply = ask_free_ai(compiled_prompt, "llama")
     elif mode == "mistral":
-        reply = ask_pollinations(compiled_prompt, "mistral")
+        reply = ask_free_ai(compiled_prompt, "mistral")
     elif mode == "qwen":
-        reply = ask_pollinations(compiled_prompt, "qwen-coder")
+        reply = ask_free_ai(compiled_prompt, "qwen-coder")
     else:
-        # COUNCIL MODE: Combines Gemini + OpenAI + Llama into one master response
         g_ans = ask_gemini(compiled_prompt)
-        gpt_ans = ask_pollinations(compiled_prompt, "openai")
-        l_ans = ask_llama(compiled_prompt)
-
+        gpt_ans = ask_free_ai(compiled_prompt, "openai")
         synth_prompt = f"""
 User said: "{user_msg}" (Language: {target_lang})
-Brain 1 (Gemini): {g_ans}
-Brain 2 (OpenAI): {gpt_ans}
-Brain 3 (Llama): {l_ans}
+Brain 1: {g_ans}
+Brain 2: {gpt_ans}
 
-Combine the sharpest advice and most brutal 2-to-3 word comebacks from all three into ONE clean, natural reply in the user's language. Do not mention the different brains.
+Combine the sharpest advice and most brutal 2-to-3 word comebacks from both into ONE clean, natural reply in the user's language. Do not mention the brains.
 """
         reply = ask_gemini(synth_prompt) if GEMINI_API_KEY else gpt_ans
 
