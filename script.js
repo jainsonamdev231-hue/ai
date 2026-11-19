@@ -1,8 +1,3 @@
-/* ==========================================================================
-   OMNIBRAIN GOD MODE — DUAL-ENGINE JAVASCRIPT CONTROLLER
-   Automatically runs on Render Python Backend OR 100% Standalone on GitHub Pages
-   ========================================================================== */
-
 const chatBox = document.getElementById("chat-box");
 const userInput = document.getElementById("user-input");
 const aiMode = document.getElementById("ai-mode");
@@ -17,17 +12,16 @@ const localKeyInput = document.getElementById("local-gemini-key");
 
 let voiceEnabled = true;
 let backendAvailable = false;
+let isSending = false;
 
-// Master System Personality for Standalone Mode
 const MASTER_PERSONALITY = `
 You are OmniBrain GOD, an omnilingual, hyper-intelligent, human-like AI advisor and savage roast master.
-1. EVERY LANGUAGE: Fluently understand and reply in English, Hindi, Hinglish, and every other language/slang on Earth. Match the user's exact vibe.
-2. DEEP HUMAN THINKING: Give raw, honest, street-smart life, school, and coding advice without robotic lectures.
+1. EVERY LANGUAGE: Fluently understand and reply in English, Hindi, Hinglish, and every other language/slang on Earth. Always match the user's exact vibe.
+2. DEEP HUMAN THINKING: Give raw, honest, street-smart school, coding, and life advice without robotic lectures.
 3. SAVAGE 2-3 WORD ROASTS: When asked for a comeback or roast, deliver brutal, witty, punchy 2-to-3-word comebacks without holding back.
 4. MEMORY: Use saved facts and recent conversation history naturally like a real human brain.
 `;
 
-// --- LOCAL BROWSER STORAGE HELPERS (FOR GITHUB PAGES / NO-RENDER MODE) ---
 function getLocalFacts() {
   return JSON.parse(localStorage.getItem("omnibrain_facts") || "[]");
 }
@@ -48,18 +42,16 @@ function saveLocalKey() {
   if (!key) return;
   localStorage.setItem("omnibrain_gemini_key", key);
   localKeyInput.value = "";
-  alert("Gemini API Key saved safely in your browser!");
+  alert("Gemini API Key saved in your browser!");
 }
 
-// --- INITIALIZE APP & DETECT RUNTIME MODE ---
 window.addEventListener("DOMContentLoaded", async () => {
   try {
-    // Check if Python Flask / Render server is active
     const res = await fetch("/api/state", { cache: "no-store" });
     if (res.ok) {
       backendAvailable = true;
       const data = await res.json();
-      runtimeBadge.textContent = "⚡ GOD MODE: Python / Render Server Connected";
+      runtimeBadge.textContent = "⚡ GOD MODE: Render / Python Server Connected";
       renderFacts(data.facts || []);
       if (data.history && data.history.length > 0) {
         data.history.forEach((m) => appendMessage(m.message, m.sender, m.ai_model || "council", false));
@@ -70,15 +62,14 @@ window.addEventListener("DOMContentLoaded", async () => {
     backendAvailable = false;
   }
 
-  // Fallback to 100% Standalone Browser Mode (GitHub Pages Ready!)
-  runtimeBadge.textContent = "🌐 STANDALONE MODE: Running 100% on GitHub / Browser";
+  runtimeBadge.textContent = "🌐 STANDALONE MODE: Running in Browser";
   renderFacts(getLocalFacts());
   const localHist = getLocalHistory();
   if (localHist.length > 0) {
     localHist.forEach((m) => appendMessage(m.message, m.sender, m.ai_model || "free-ai", false));
   } else {
     appendMessage(
-      "Yo! OmniBrain GOD MODE is live!\n• Works on GitHub Pages AND Render.\n• Connected to Gemini Flash Latest + 100% Free OpenAI, DeepSeek, Llama 3.3, Mistral & Qwen.\n• Ask for deep advice or tap '🔥 2-3 Word Roast' in English, Hindi, Hinglish, or any language!",
+      "Yo! Type any message of your own in the box below and hit Send 🚀, or tap 🔥 2-3 Word Roast!",
       "ai",
       "god-mode",
       false
@@ -86,9 +77,9 @@ window.addEventListener("DOMContentLoaded", async () => {
   }
 });
 
-// Send message on Enter key (Shift+Enter adds new line)
+// Send on Enter key
 userInput.addEventListener("keydown", (e) => {
-  if (e.key === "Enter" && !e.shiftKey) {
+  if (e.key === "Enter") {
     e.preventDefault();
     sendMessage();
   }
@@ -106,7 +97,6 @@ function toggleVoiceOutput() {
   }
 }
 
-// Text-to-Speech Output
 function speakText(text) {
   if (!voiceEnabled || !("speechSynthesis" in window)) return;
   window.speechSynthesis.cancel();
@@ -122,7 +112,6 @@ function copyText(text) {
   navigator.clipboard.writeText(text);
 }
 
-// Render Message Bubble into Chat Stream
 function appendMessage(text, sender, modelTag = "council", autoSpeak = false) {
   const wrap = document.createElement("div");
   wrap.className = `msg ${sender}`;
@@ -140,10 +129,12 @@ function appendMessage(text, sender, modelTag = "council", autoSpeak = false) {
     actions.className = "msg-actions";
 
     const speakBtn = document.createElement("button");
+    speakBtn.type = "button";
     speakBtn.textContent = "🔊 Speak";
     speakBtn.onclick = () => speakText(bodySpan.textContent);
 
     const copyBtn = document.createElement("button");
+    copyBtn.type = "button";
     copyBtn.textContent = "📋 Copy";
     copyBtn.onclick = () => copyText(bodySpan.textContent);
 
@@ -159,11 +150,9 @@ function appendMessage(text, sender, modelTag = "council", autoSpeak = false) {
   return bodySpan;
 }
 
-// Direct Browser AI Engine (Used when running on GitHub Pages without Render)
 async function runStandaloneAI(promptText, mode) {
   const apiKey = getLocalGeminiKey();
 
-  // 1. Use Gemini Flash Latest directly if user saved their key
   if ((mode === "gemini" || mode === "council") && apiKey) {
     try {
       const res = await fetch(
@@ -184,7 +173,6 @@ async function runStandaloneAI(promptText, mode) {
     } catch (_) {}
   }
 
-  // 2. Key-Free Trending AI Models (OpenAI, DeepSeek, Llama, Mistral, Qwen)
   const modelMap = {
     gpt: "openai",
     deepseek: "deepseek",
@@ -206,20 +194,31 @@ async function runStandaloneAI(promptText, mode) {
       model: modelMap[mode] || "openai"
     })
   });
-  return (await res.text()).trim();
+
+  if (!res.ok) {
+    throw new Error(`HTTP ${res.status}`);
+  }
+  const out = (await res.text()).trim();
+  return out || "Got an empty reply—try sending again!";
 }
 
-// Main Send Handler
 async function sendMessage(overrideText = null) {
-  const text = overrideText || userInput.value.trim();
-  if (!text) return;
-  if (!overrideText) userInput.value = "";
+  const rawVal = overrideText !== null ? overrideText : userInput.value;
+  const text = String(rawVal || "").trim();
+  if (!text) {
+    userInput.focus();
+    return;
+  }
+  if (overrideText === null) {
+    userInput.value = "";
+  }
+  if (isSending) return;
+  isSending = true;
 
   appendMessage(text, "user", aiMode.value, false);
-  const thinkingNode = appendMessage("Thinking across AI brains...", "ai", aiMode.value, false);
+  const thinkingNode = appendMessage("Thinking...", "ai", aiMode.value, false);
 
   try {
-    // Route A: Render / Python Server Mode
     if (backendAvailable) {
       const res = await fetch("/chat", {
         method: "POST",
@@ -230,31 +229,32 @@ async function sendMessage(overrideText = null) {
           language: replyLang.value
         })
       });
+      if (!res.ok) throw new Error(`Server status ${res.status}`);
       const data = await res.json();
-      thinkingNode.textContent = data.reply;
-      speakText(data.reply);
-      return;
+      thinkingNode.textContent = data.reply || "No reply returned.";
+      speakText(thinkingNode.textContent);
+    } else {
+      const facts = getLocalFacts().map((f) => `- ${f.fact_key}: ${f.fact_value}`).join("\n");
+      const hist = getLocalHistory().slice(-12).map((m) => `${m.sender.toUpperCase()}: ${m.message}`).join("\n");
+      const fullPrompt = `[SAVED FACTS]\n${facts}\n\n[RECENT CHAT]\n${hist}\n\n[PREFERRED LANGUAGE]\n${replyLang.value}\n\n[USER MESSAGE]\n${text}`;
+
+      const reply = await runStandaloneAI(fullPrompt, aiMode.value);
+      thinkingNode.textContent = reply;
+      speakText(reply);
+
+      const updated = getLocalHistory();
+      updated.push({ sender: "user", message: text, ai_model: aiMode.value });
+      updated.push({ sender: "ai", message: reply, ai_model: aiMode.value });
+      setLocalHistory(updated);
     }
-
-    // Route B: Standalone GitHub Pages Browser Mode
-    const facts = getLocalFacts().map((f) => `- ${f.fact_key}: ${f.fact_value}`).join("\n");
-    const hist = getLocalHistory().slice(-12).map((m) => `${m.sender.toUpperCase()}: ${m.message}`).join("\n");
-    const fullPrompt = `[SAVED FACTS]\n${facts}\n\n[RECENT CHAT]\n${hist}\n\n[PREFERRED LANGUAGE]\n${replyLang.value}\n\n[USER MESSAGE]\n${text}`;
-
-    const reply = await runStandaloneAI(fullPrompt, aiMode.value);
-    thinkingNode.textContent = reply;
-    speakText(reply);
-
-    const updated = getLocalHistory();
-    updated.push({ sender: "user", message: text, ai_model: aiMode.value });
-    updated.push({ sender: "ai", message: reply, ai_model: aiMode.value });
-    setLocalHistory(updated);
   } catch (err) {
-    thinkingNode.textContent = "⚠️ Network hiccup—please hit Send again!";
+    thinkingNode.textContent = `⚠️ Could not send/receive right now (${err.message}). Try again!`;
+  } finally {
+    isSending = false;
+    userInput.focus();
   }
 }
 
-// Quick Roast Button
 function quickRoast() {
   const target = userInput.value.trim() || "someone acting oversmart in school";
   userInput.value = "";
@@ -274,7 +274,6 @@ function quickPrompt(promptText) {
   sendMessage(promptText);
 }
 
-// --- MEMORY VAULT CRUD ---
 function renderFacts(facts) {
   factList.innerHTML = "";
   if (!facts.length) {
@@ -286,6 +285,7 @@ function renderFacts(facts) {
     item.className = "fact-item";
     item.innerHTML = `<div><strong>${f.fact_key}:</strong> ${f.fact_value}</div>`;
     const delBtn = document.createElement("button");
+    delBtn.type = "button";
     delBtn.className = "fact-del";
     delBtn.textContent = "✖";
     delBtn.onclick = () => removeFact(f.fact_key);
@@ -352,7 +352,6 @@ function exportChat() {
   a.click();
 }
 
-// Microphone Voice-to-Text
 function startListening() {
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SpeechRecognition) {
