@@ -4,68 +4,56 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>OmniBrain GOD MODE — Multi-AI & Savage Roast Engine</title>
-  <!-- Direct relative links so BOTH GitHub Pages and Render load CSS & JS cleanly -->
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <div class="app-layout">
-    <!-- =========================================================
-         LEFT SIDEBAR: PERMANENT MEMORY VAULT & ROAST PRESETS
-         ========================================================= -->
+    <!-- LEFT SIDEBAR: PERMANENT MEMORY VAULT & ROAST PRESETS -->
     <aside class="sidebar" id="sidebar">
       <div class="sidebar-header">
         <h2>🧠 Memory Vault</h2>
-        <button class="close-sidebar-btn" onclick="toggleSidebar()" title="Close Sidebar">✖</button>
+        <button type="button" class="close-sidebar-btn" onclick="toggleSidebar()" title="Close Sidebar">✖</button>
       </div>
 
-      <!-- Shows whether app is running on Render Server or GitHub Standalone -->
       <p class="sidebar-sub" id="runtime-badge">Detecting runtime environment...</p>
 
-      <!-- Optional Local API Key Box (Used when running without Render) -->
       <div class="fact-form">
         <input type="password" id="local-gemini-key" placeholder="Paste Gemini Key (For GitHub-only mode)" />
-        <button onclick="saveLocalKey()">🔑 Save Gemini Key</button>
+        <button type="button" onclick="saveLocalKey()">🔑 Save Gemini Key</button>
       </div>
 
-      <!-- Add Permanent Facts about Friends, School, or Preferences -->
       <div class="fact-form">
         <input type="text" id="fact-key" placeholder="Topic (e.g., Best Friend)" />
         <input type="text" id="fact-val" placeholder="Detail (e.g., Always acts oversmart)" />
-        <button onclick="saveFact()">+ Save Fact to Brain</button>
+        <button type="button" onclick="saveFact()">+ Save Fact to Brain</button>
       </div>
 
-      <!-- Saved Facts Display Container -->
       <div class="fact-list" id="fact-list"></div>
 
-      <!-- One-Click Roast Style Presets -->
       <div class="roast-presets">
         <h3>🔥 Instant Roast Styles</h3>
-        <button onclick="triggerPresetRoast('Hinglish School Slang')">🎒 Hinglish School Roast (2-3 Words)</button>
-        <button onclick="triggerPresetRoast('Pure Hindi Savage')">🇮🇳 Desi Hindi Comeback (2-3 Words)</button>
-        <button onclick="triggerPresetRoast('English Brutal Witty')">⚡ English Savage Comeback</button>
-        <button onclick="triggerPresetRoast('High-IQ Genius Burn')">🧐 Smart Intellectual Burn</button>
+        <button type="button" onclick="triggerPresetRoast('Hinglish School Slang')">🎒 Hinglish School Roast (2-3 Words)</button>
+        <button type="button" onclick="triggerPresetRoast('Pure Hindi Savage')">🇮🇳 Desi Hindi Comeback (2-3 Words)</button>
+        <button type="button" onclick="triggerPresetRoast('English Brutal Witty')">⚡ English Savage Comeback</button>
+        <button type="button" onclick="triggerPresetRoast('High-IQ Genius Burn')">🧐 Smart Intellectual Burn</button>
       </div>
 
-      <!-- Bottom Export & Wipe Controls -->
       <div class="sidebar-footer">
-        <button class="danger-btn" onclick="wipeHistory()">🗑️ Clear Chat</button>
-        <button class="export-btn" onclick="exportChat()">📥 Export .txt</button>
+        <button type="button" class="danger-btn" onclick="wipeHistory()">🗑️ Clear Chat</button>
+        <button type="button" class="export-btn" onclick="exportChat()">📥 Export .txt</button>
       </div>
     </aside>
 
-    <!-- =========================================================
-         MAIN PANEL: TOP NAVIGATION, CHAT STREAM & COMPOSER
-         ========================================================= -->
+    <!-- MAIN PANEL: TOP NAVIGATION, CHAT STREAM & COMPOSER -->
     <main class="main-panel">
       <header class="top-nav">
         <div class="brand-group">
-          <button class="menu-btn" onclick="toggleSidebar()">☰ Vault</button>
+          <button type="button" class="menu-btn" onclick="toggleSidebar()">☰ Vault</button>
           <h1>OmniBrain <span>GOD</span></h1>
           <span class="status-dot" id="status-dot" title="System Online"></span>
         </div>
 
         <div class="nav-selectors">
-          <!-- Multi-AI Brain Selector -->
           <select id="ai-mode" title="Choose AI Engine">
             <option value="council">⚡ All AIs Combined (Council)</option>
             <option value="gemini">💎 Gemini Flash Latest</option>
@@ -76,7 +64,6 @@
             <option value="qwen">💻 Qwen 2.5 Coder (100% Free)</option>
           </select>
 
-          <!-- Reply Language & Slang Selector -->
           <select id="reply-lang" title="Choose Reply Language">
             <option value="Auto-Detect (Match User Language)">🌍 Auto-Match My Language</option>
             <option value="Hinglish (Indian School/College Slang)">🇮🇳 Hinglish (Desi Slang)</option>
@@ -90,7 +77,6 @@
             <option value="French">🇫🇷 French</option>
           </select>
 
-          <!-- Voice Output & Microphone Accent -->
           <select id="voice-lang" title="Voice & Mic Accent">
             <option value="en-IN">🎙️ Indian Accent (en-IN)</option>
             <option value="hi-IN">🎙️ Hindi Voice (hi-IN)</option>
@@ -99,14 +85,12 @@
             <option value="ja-JP">🎙️ Japanese Voice</option>
           </select>
 
-          <button id="mute-btn" onclick="toggleVoiceOutput()">🔊 Voice: ON</button>
+          <button type="button" id="mute-btn" onclick="toggleVoiceOutput()">🔊 Voice: ON</button>
         </div>
       </header>
 
-      <!-- Live Chat Conversation Area -->
       <section id="chat-box" class="chat-stream"></section>
 
-      <!-- Quick Starter Prompt Chips -->
       <div class="chip-bar">
         <span class="chip" onclick="quickPrompt('Give me 6 savage 2-to-3 word roasts in Hinglish, Hindi, and English for someone acting oversmart.')">🔥 Roast Oversmart</span>
         <span class="chip" onclick="quickPrompt('Give me 6 brutal 2-to-3 word comebacks when someone says: Who asked you?')">⚡ Beat "Who Asked?"</span>
@@ -114,17 +98,21 @@
         <span class="chip" onclick="quickPrompt('Pitch me a viral game or web app idea we can code next.')">💻 Next Coding Idea</span>
       </div>
 
-      <!-- Bottom Message Input & Roast Trigger -->
-      <footer class="composer">
-        <button id="mic-btn" onclick="startListening()" title="Speak into Microphone">🎙️</button>
-        <textarea id="user-input" rows="1" placeholder="Ask for advice, code, or type who to roast in any language..."></textarea>
-        <button class="send-btn" onclick="sendMessage()">Send 🚀</button>
-        <button class="roast-btn" onclick="quickRoast()">🔥 2-3 Word Roast</button>
-      </footer>
+      <!-- Direct Text Box + Send & Roast Buttons -->
+      <div class="composer">
+        <button type="button" id="mic-btn" onclick="startListening()" title="Speak into Microphone">🎙️</button>
+        <input
+          type="text"
+          id="user-input"
+          autocomplete="off"
+          placeholder="Type your own message, question, or who to roast..."
+        />
+        <button type="button" id="send-btn" class="send-btn" onclick="sendMessage()">Send 🚀</button>
+        <button type="button" id="roast-btn" class="roast-btn" onclick="quickRoast()">🔥 2-3 Word Roast</button>
+      </div>
     </main>
   </div>
 
-  <!-- Main Frontend JavaScript Engine -->
   <script src="script.js"></script>
 </body>
 </html>
